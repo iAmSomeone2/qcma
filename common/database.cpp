@@ -33,7 +33,8 @@
 const file_type audio_list[] = {
     {"mp3", FILE_FORMAT_MP3, CODEC_TYPE_MP3},
     {"mp4", FILE_FORMAT_MP4, CODEC_TYPE_AAC},
-    {"wav", FILE_FORMAT_WAV, CODEC_TYPE_PCM}
+    {"wav", FILE_FORMAT_WAV, CODEC_TYPE_PCM},
+    {"m4a", FILE_FORMAT_MP4, CODEC_TYPE_AAC}
 };
 
 const file_type photo_list[] = {

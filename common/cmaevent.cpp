@@ -304,6 +304,9 @@ void CmaEvent::vitaEventSendCopyConfirmationInfo(vita_event_t *cma_event, int ev
 
                 }
                 m_db->freeMetadata(meta_list);
+            } else {
+                // a single file: report its size instead of 0
+                total_size = obj_meta.size;
             }
         }
     } else {

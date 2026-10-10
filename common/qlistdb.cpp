@@ -321,7 +321,10 @@ bool QListDB::hasFilter(const CMARootObject *object,int ohfi)
 bool QListDB::findInternal(const root_list &list, int ohfi, find_data &data)
 {
     if(hasFilter(static_cast<CMARootObject *>(list.first()), ohfi)) {
+        // filter ohfis resolve to the root object, whose ohfi differs by design
         data.it = list.begin();
+        data.end = list.end();
+        return true;
     } else {
         CMAObject obj;
         obj.setOhfi(ohfi);

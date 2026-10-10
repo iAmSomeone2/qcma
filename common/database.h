@@ -53,7 +53,7 @@ typedef struct {
 #define CODEC_TYPE_BMP 20
 #define CODEC_TYPE_GIF 21
 
-extern const file_type audio_list[3];
+extern const file_type audio_list[4];
 extern const file_type photo_list[7];
 extern const file_type video_list[1];
 

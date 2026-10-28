@@ -20,6 +20,7 @@
 #include "cmarootobject.h"
 
 #include <QDir>
+#include <QMap>
 
 QString CMARootObject::uuid = "ffffffffffffffff";
 
@@ -134,6 +135,48 @@ void CMARootObject::createFilter(metadata_t *filter, const char *name, int type)
     filter->dataType = static_cast<DataType>(Folder | Special);
     filter->next_metadata = NULL;
     //qDebug("Added filter %s to database with OHFI %d (%s)", name, filter->ohfi, metadata.name);
+}
+
+void CMARootObject::appendArtistGroups(QList<CMAObject *> &list)
+{
+    int artists_ohfi = 0;
+
+    for(int i = 0; i < num_filters; i++) {
+        if((filters[i].type & 0xFFFF) == VITA_DIR_TYPE_MASK_ARTISTS) {
+            artists_ohfi = filters[i].ohfi;
+        }
+    }
+
+    if(!artists_ohfi) {
+        return;
+    }
+
+    // QMap keeps the artists sorted by name
+    QMap<QString, qint64> artists;
+
+    foreach(const CMAObject *obj, list) {
+        if(MASK_SET(obj->metadata.dataType, Music | File)) {
+            artists[obj->artist()] += obj->metadata.size;
+        }
+    }
+
+    // appended after the scan, so the ohfis keep the list sorted for lower_bound lookups
+    for(QMap<QString, qint64>::const_iterator it = artists.constBegin(); it != artists.constEnd(); ++it) {
+        CMAObject *group = new CMAObject(this);
+        // copies from the Vita into a group land in the music root, like filters
+        group->m_path = m_path;
+        group->metadata.ohfiParent = artists_ohfi;
+        group->metadata.ohfi = ohfi_count++;
+        group->metadata.name = strdup(it.key().toUtf8().constData());
+        group->metadata.path = strdup(metadata.path ? metadata.path : "");
+        // unverified on hardware: the type the Vita expects for an artist node
+        group->metadata.type = VITA_DIR_TYPE_MASK_MUSIC | VITA_DIR_TYPE_MASK_ARTISTS;
+        group->metadata.size = it.value();
+        group->metadata.dataType = static_cast<DataType>(Music | Folder | Special);
+        list << group;
+    }
+
+    qDebug("Added %i artist groups", static_cast<int>(artists.size()));
 }
 
 int CMARootObject::getFilters(metadata_t **p_head)

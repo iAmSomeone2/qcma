@@ -35,6 +35,7 @@ public:
     void initObject(const QString &path);
     void remove(const CMAObject *obj);
     int getFilters(metadata_t **p_head);
+    void appendArtistGroups(QList<CMAObject *> &list);
 
     int num_filters;
     metadata_t *filters;

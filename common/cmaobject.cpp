@@ -180,6 +180,12 @@ void CMAObject::initObject(const QFileInfo &file, int obj_file_type)
     updateObjectSize(file.size());
 }
 
+QString CMAObject::artist() const
+{
+    const char *name = metadata.data.music.artist;
+    return name && *name ? QString::fromUtf8(name) : QStringLiteral("Unknown Artist");
+}
+
 void CMAObject::updateObjectSize(qint64 size)
 {
     if(parent) {

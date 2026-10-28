@@ -167,6 +167,10 @@ int QListDB::createFromOhfi(int ohfi)
 
     if(!skipCurrent) {
         dir_count = recursiveScanRootDirectory(list, obj, ohfi);
+
+        if(dir_count >= 0 && ohfi == VITA_OHFI_MUSIC) {
+            obj->appendArtistGroups(list);
+        }
     } else {
         dir_count = 0;
     }
@@ -376,26 +380,25 @@ int QListDB::acceptFilteredObject(const CMAObject *obj_parent, const CMAObject *
         result = (current->metadata.dataType & Music);
     }
 
-    if(MASK_SET(type, VITA_DIR_TYPE_MASK_ARTISTS)) {
-        // unimplemented
+    // the low bits are an enumeration, not flags (ALBUMS 0x5 contains ARTISTS 0x4 and REGULAR 0x1)
+    switch(type & 0xFFFF) {
+    case VITA_DIR_TYPE_MASK_ARTISTS:
+        if(type & VITA_DIR_TYPE_MASK_ROOT) {
+            // the Artists filter lists the artist groups
+            return (current->metadata.dataType & Special) && (current->metadata.type & 0xFFFF) == VITA_DIR_TYPE_MASK_ARTISTS;
+        }
+        // an artist group lists its songs
+        return result && (current->metadata.dataType & File) &&
+                current->artist() == QString::fromUtf8(obj_parent->metadata.name);
+    case VITA_DIR_TYPE_MASK_ALL:
+    case VITA_DIR_TYPE_MASK_SONGS:
+        return result && (current->metadata.dataType & File);
+    case VITA_DIR_TYPE_MASK_REGULAR:
+        return obj_parent->metadata.ohfi == current->metadata.ohfiParent;
+    default:
+        // TODO: albums, genres, playlists and month are unimplemented
         return 0;
-    } else if(MASK_SET(type, VITA_DIR_TYPE_MASK_GENRES)) {
-        // unimplemented
-        return 0;
-    } else if(MASK_SET(type, VITA_DIR_TYPE_MASK_PLAYLISTS)) {
-        // unimplemented
-        return 0;
-    } else if(MASK_SET(type, VITA_DIR_TYPE_MASK_MONTH)) {
-        // unimplemented
-        return 0;
-    } else if(type & (VITA_DIR_TYPE_MASK_ALL | VITA_DIR_TYPE_MASK_SONGS)) {
-        result = result && (current->metadata.dataType & File);
-    } else if(type & (VITA_DIR_TYPE_MASK_REGULAR)) {
-        result = (obj_parent->metadata.ohfi == current->metadata.ohfiParent);
     }
-
-    // TODO: Support other filter types
-    return result;
 }
 
 void QListDB::dumpMetadataList(const metadata_t *p_head)
@@ -455,7 +458,8 @@ bool QListDB::deleteEntry(int ohfi, int root_ohfi)
 bool QListDB::getObjectList(int ohfi, metadata_t **metadata)
 {
     find_data iters;
-    if(find(ohfi, iters)) {
+    // artist groups are virtual and have nothing to copy
+    if(find(ohfi, iters) && !((*iters.it)->metadata.dataType & Special)) {
         CMAObject *object;
         do {
             object = *iters.it;
@@ -463,7 +467,7 @@ bool QListDB::getObjectList(int ohfi, metadata_t **metadata)
             metadata = &(*metadata)->next_metadata;
             *metadata = NULL;
             object = *++iters.it;
-        } while(iters.it != iters.end && object->metadata.ohfiParent >= OHFI_OFFSET);
+        } while(iters.it != iters.end && object->metadata.ohfiParent >= OHFI_OFFSET && !(object->metadata.dataType & Special));
         return true;
     }
     return false;
@@ -565,6 +569,11 @@ int QListDB::insertObjectEntry(const QString &path, const QString &name, int par
     QMutexLocker locker(&mutex);
 
     CMAObject *parent_obj = ohfiToObject(parent_ohfi);
+
+    // artist groups are virtual, store new files in the root like filters do
+    if(parent_obj && (parent_obj->metadata.dataType & Special)) {
+        parent_obj = parent_obj->parent;
+    }
 
     for(map_list::iterator root = object_list.begin(); root != object_list.end(); ++root) {
         root_list *cat_list = &(*root);

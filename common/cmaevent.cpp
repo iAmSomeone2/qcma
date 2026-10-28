@@ -721,8 +721,31 @@ void CmaEvent::vitaEventSendObjectThumb(vita_event_t *cma_event, int eventId)
         return;
     }
 
-    QString fullpath = m_db->getAbsolutePath(ohfi);
-    QByteArray data = getThumbnail(fullpath, metadata.dataType, &g_thumbmeta);
+    QString fullpath;
+    QByteArray data;
+
+    if(metadata.dataType & Special) {
+        // artist and album groups use the cover image next to their first song, or its embedded art.
+        // The cover image goes first because it covers the whole album, while songs of multi-disc
+        // albums often embed the art of their own disc
+        metadata_t *song = NULL;
+
+        if(m_db->getObjectMetadatas(ohfi, &song, 0, 1) > 0) {
+            QString songpath = m_db->getAbsolutePath(song->ohfi);
+            fullpath = QFileInfo(songpath).absolutePath();
+            data = getThumbnail(fullpath, static_cast<DataType>(Music | Folder), &g_thumbmeta);
+
+            if(data.size() == 0) {
+                fullpath = songpath;
+                data = getThumbnail(fullpath, song->dataType, &g_thumbmeta);
+            }
+        }
+
+        m_db->freeMetadata(song);
+    } else {
+        fullpath = m_db->getAbsolutePath(ohfi);
+        data = getThumbnail(fullpath, metadata.dataType, &g_thumbmeta);
+    }
 
     if(data.size() == 0) {
         qWarning() << "Cannot find/read thumbnail for" << fullpath;

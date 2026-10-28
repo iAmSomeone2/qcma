@@ -278,7 +278,10 @@ void CmaEvent::vitaEventSendCopyConfirmationInfo(vita_event_t *cma_event, int ev
             // got a folder
             if(obj_meta.dataType & Folder) {
                 metadata_t *meta_list = NULL;
-                if(m_db->getObjectList(info->ohfi[0], &meta_list)) {
+                // artist and album groups are virtual, expand them to their songs
+                bool found = (obj_meta.dataType & Special) ? m_db->getObjectMetadatas(info->ohfi[0], &meta_list) > 0
+                             : m_db->getObjectList(info->ohfi[0], &meta_list);
+                if(found) {
                     int count = 0;
                     metadata_t *single_meta = meta_list;
                     // count files
@@ -310,16 +313,43 @@ void CmaEvent::vitaEventSendCopyConfirmationInfo(vita_event_t *cma_event, int ev
             }
         }
     } else {
-        qint64 size;
+        // the Vita only stores songs correctly when they are copied one by one,
+        // so expand artist and album groups to their songs like a single group above
+        QList<quint32> ohfis;
 
         for(quint32 i = 0; i < info->count; i++) {
-            if((size = m_db->getObjectSize(info->ohfi[i])) < 0) {
-                qWarning("Cannot find OHFI %d", info->ohfi[i]);
-                free(info);
-                return;
-            }
+            metadata_t obj_meta;
 
-            total_size += size;
+            if(m_db->getObjectMetadata(info->ohfi[i], obj_meta) && (obj_meta.dataType & Special)) {
+                metadata_t *meta_list = NULL;
+                m_db->getObjectMetadatas(info->ohfi[i], &meta_list);
+
+                for(metadata_t *song = meta_list; song; song = song->next_metadata) {
+                    ohfis << song->ohfi;
+                    total_size += song->size;
+                }
+
+                m_db->freeMetadata(meta_list);
+            } else {
+                qint64 size;
+
+                if((size = m_db->getObjectSize(info->ohfi[i])) < 0) {
+                    qWarning("Cannot find OHFI %d", info->ohfi[i]);
+                    free(info);
+                    return;
+                }
+
+                ohfis << info->ohfi[i];
+                total_size += size;
+            }
+        }
+
+        free(info);
+        info = (copy_confirmation_info_t *)malloc(sizeof(uint32_t) * ohfis.size() + sizeof(copy_confirmation_info_t));
+        info->count = 0;
+
+        foreach(quint32 ohfi, ohfis) {
+            info->ohfi[info->count++] = ohfi;
         }
     }
 

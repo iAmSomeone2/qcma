@@ -37,7 +37,7 @@ HEADERS += \
     qlistdb.h \
     database.h
 
-PKGCONFIG += libvitamtp
+INCLUDEPATH += $$PWD/../vitamtp/src
 
 !DISABLE_FFMPEG {
     DEFINES += FFMPEG_ENABLED

@@ -5,7 +5,8 @@
 #-------------------------------------------------
 
 TEMPLATE = subdirs
-SUBDIRS = common
+SUBDIRS = libvitamtp common
+common.depends = libvitamtp
 
 unix:!macx {
     # Compile the headless binary only on Linux

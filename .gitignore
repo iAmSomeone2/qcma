@@ -16,3 +16,7 @@ gui/qcma
 cli/qcma_cli
 *.a
 qrc_*.cpp
+
+# autotools build of the vitamtp submodule
+libvitamtp/*
+!libvitamtp/libvitamtp.pro

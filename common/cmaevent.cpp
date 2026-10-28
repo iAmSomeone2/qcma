@@ -337,10 +337,17 @@ void CmaEvent::vitaEventSendObjectMetadataItems(vita_event_t *cma_event, int eve
     qDebug("Event received in %s, code: 0x%x, id: %d", Q_FUNC_INFO, cma_event->Code, eventId);
 
     quint32 ohfi;
-    if(VitaMTP_SendObjectMetadataItems(m_device, eventId, &ohfi) != PTP_RC_OK) {
+    quint32 *items;
+    quint32 num_items;
+    if(VitaMTP_GetObjectMetadataItems(m_device, eventId, &ohfi, &items, &num_items) != PTP_RC_OK) {
         qWarning("Cannot get OHFI for retreving metadata");
         return;
     }
+
+    for(quint32 i = 0; i < num_items; i++) {
+        qDebug("Metadata item 0x%02X requested for OHFI %d", items[i], ohfi);
+    }
+    free(items);
 
     QMutexLocker locker(&m_db->mutex);
 
@@ -355,6 +362,7 @@ void CmaEvent::vitaEventSendObjectMetadataItems(vita_event_t *cma_event, int eve
     metadata.next_metadata = NULL;
     qDebug("Sending metadata for OHFI %d (%s)", ohfi, metadata.path);
 
+    // TODO: the requested items (0x1D and 0x1E for artist groups) are ignored, their reply format is unknown
     quint16 ret = VitaMTP_SendObjectMetadata(m_device, eventId, &metadata);
     if(ret != PTP_RC_OK) {
         qWarning("Error sending metadata. Code: %04X", ret);

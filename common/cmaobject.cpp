@@ -180,8 +180,14 @@ void CMAObject::initObject(const QFileInfo &file, int obj_file_type)
     updateObjectSize(file.size());
 }
 
-QString CMAObject::artist() const
+// name of the Artists or Albums group a music file belongs to
+QString CMAObject::groupName(int kind) const
 {
+    if(kind == VITA_DIR_TYPE_MASK_ALBUMS) {
+        const char *name = metadata.data.music.album;
+        return name && *name ? QString::fromUtf8(name) : QStringLiteral("Unknown Album");
+    }
+
     const char *name = metadata.data.music.artist;
     return name && *name ? QString::fromUtf8(name) : QStringLiteral("Unknown Artist");
 }

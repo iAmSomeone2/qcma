@@ -38,7 +38,7 @@ public:
     void updateObjectSize(qint64 size);
     bool hasParent(const CMAObject *obj);
     void initObject(const QFileInfo &file, int file_type = -1);
-    QString artist() const;
+    QString groupName(int kind) const;
 
     bool operator==(const CMAObject &obj);
     bool operator!=(const CMAObject &obj);
